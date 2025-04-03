@@ -2,12 +2,11 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from models import simulate_demand_vbic, load_static_data
+from models import simulate_demand_supply_vbic, load_static_data, all_regions_forecast, specialty_summary
 
 st.set_page_config(page_title="Saudi VBIC Healthcare Simulation", layout="wide")
-st.title("Saudi Arabia Healthcare Forecast under Value-Based Integrated Care (VBIC)")
+st.title("Saudi Arabia VBIC Healthcare Simulation Dashboard")
 
-# Sidebar inputs
 regions = ["Riyadh", "Makkah", "Madinah", "Eastern Province", "Qassim", "Hail", 
            "Tabuk", "Jouf", "Nothern Borders", "Baha", "Assir", "Najran", "Jizan"]
 
@@ -19,23 +18,38 @@ specialties = ["Pediatrics", "General Surgery", "Internal Medicine", "Obstetrics
 region = st.sidebar.selectbox("Select Region", regions)
 specialty = st.sidebar.selectbox("Select Specialty", specialties)
 
-if st.sidebar.button("Run VBIC Simulation"):
-    df = simulate_demand_vbic(region, specialty)
-    st.success(f"VBIC Forecast complete for {specialty} in {region}.")
-
-    st.subheader("Forecasted Resource Demand per 1,000 Population")
-    fig = px.line(df, x="Year", y=["Beds_per_1k", "Nurses_per_1k", "Outpatient_Clinics_per_1k", "Physician_Clinics_per_1k"],
-                  markers=True, labels={
-                      "Beds_per_1k": "Beds",
-                      "Nurses_per_1k": "Nurses",
-                      "Outpatient_Clinics_per_1k": "Outpatient Clinics",
-                      "Physician_Clinics_per_1k": "Physician Clinics"
-                  })
+if st.sidebar.button("Run Forecast"):
+    df = simulate_demand_supply_vbic(region, specialty)
+    st.success(f"Forecast complete for {specialty} in {region}.")
+    st.subheader("Forecasted Resource Demand vs Status Quo Supply (per 1,000 population)")
+    fig = px.line(df, x="Year", y=[
+        "Beds_Demand", "Beds_Supply",
+        "Nurses_Demand", "Nurses_Supply",
+        "Outpatient_Clinics_Demand", "Outpatient_Clinics_Supply",
+        "Physicians_Demand", "Physicians_Supply"
+    ])
     st.plotly_chart(fig, use_container_width=True)
-
-    csv = df.to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", csv, f"{region}_{specialty}_vbic_forecast.csv", "text/csv")
+    st.download_button("Download Forecast CSV", df.to_csv(index=False).encode("utf-8"),
+                       file_name=f"{region}_{specialty}_vbic_demand_supply.csv")
 
 st.markdown("---")
-st.header("National Healthcare Statistics (Static)")
+st.header("Healthcare Resource Gaps Across Regions (Heatmap)")
+heat_df = all_regions_forecast(specialties)
+st.dataframe(heat_df)
+fig_heat = px.imshow(heat_df.set_index("Region"),
+                     labels=dict(color="Gap Index"),
+                     color_continuous_scale="RdBu_r",
+                     title="Demand-Supply Gap Index by Specialty and Region")
+st.plotly_chart(fig_heat)
+
+st.markdown("---")
+st.header("Specialty Summary Across All Regions")
+summary_df = specialty_summary(specialties, regions)
+st.dataframe(summary_df)
+fig_summary = px.bar(summary_df, x="Specialty", y=["Beds_Gap", "Nurses_Gap", "Clinics_Gap", "Physicians_Gap"],
+                     barmode="group", title="Average Demand-Supply Gap by Specialty")
+st.plotly_chart(fig_summary)
+
+st.markdown("---")
+st.subheader("National Healthcare Statistics (Static)")
 st.dataframe(load_static_data())
