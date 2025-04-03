@@ -1,25 +1,36 @@
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
-from models import load_data
+from models import simulate_demand, load_static_data
 
-def main():
-    st.title('Saudi Arabia Healthcare Statistics Dashboard')
+st.set_page_config(page_title="Saudi Healthcare Simulation", layout="wide")
+st.title("Saudi Arabia Healthcare Simulation Dashboard")
 
-    # Load data
-    df = load_data()
+# Sidebar inputs
+regions = ["Riyadh", "Makkah", "Madinah", "Eastern Province", "Qassim", "Hail", 
+           "Tabuk", "Jouf", "Nothern Borders", "Baha", "Assir", "Najran", "Jizan"]
 
-    # Display data table
-    st.subheader('Healthcare Statistics (2024)')
-    st.table(df)
+specialties = ["Pediatrics", "General Surgery", "Internal Medicine", "Obstetrics", "Gynecology",
+               "Cardiology", "Oncology", "Neurology", "Orthopedics", "Neurosurgery",
+               "Cardiac Surgery", "Dentistry", "Dermatology", "Ophthalmology", "ENT",
+               "Family Medicine", "Geriatrics", "Palliative Care"]
 
-    # Create a bar chart for healthcare resource indicators
-    st.subheader('Healthcare Resources per 10,000 Population')
-    resources_df = df[df['Indicator'].str.contains('Beds|Physicians|Nurses')]
-    fig = px.bar(resources_df, x='Indicator', y='Value', text='Value',
-                 labels={'Value': 'Rate per 10,000 Population'})
-    st.plotly_chart(fig)
+region = st.sidebar.selectbox("Select Region", regions)
+specialty = st.sidebar.selectbox("Select Specialty", specialties)
 
-if __name__ == '__main__':
-    main()
+if st.sidebar.button("Run Simulation"):
+    df = simulate_demand(region, specialty)
+    st.success(f"Simulation complete for {specialty} in {region}.")
+
+    st.subheader("Projected Demand vs Capacity")
+    fig = px.line(df, x="Year", y=["Demand", "Beds", "Physicians", "Nurses"], markers=True)
+    st.plotly_chart(fig, use_container_width=True)
+
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button("Download Results as CSV", csv, f"{region}_{specialty}_forecast.csv", "text/csv")
+
+st.markdown("---")
+st.header("National Healthcare Statistics (Static)")
+st.dataframe(load_static_data())

@@ -1,7 +1,31 @@
 
 import pandas as pd
+import numpy as np
 
-def load_data():
+def simulate_demand(region, specialty):
+    np.random.seed(42)
+    years = list(range(2025, 2055))
+    base_demand = np.random.randint(5000, 10000)
+    data = []
+
+    for i, year in enumerate(years):
+        growth = 1.02 ** i
+        demand = int(base_demand * growth)
+        beds = int(demand * 0.0225)  # 22.5 beds per 10k people
+        physicians = int(demand * 0.0331)
+        nurses = int(demand * 0.0582)
+        data.append({
+            "Year": year,
+            "Region": region,
+            "Specialty": specialty,
+            "Demand": demand,
+            "Beds": beds,
+            "Physicians": physicians,
+            "Nurses": nurses
+        })
+    return pd.DataFrame(data)
+
+def load_static_data():
     data = {
         'Indicator': [
             'Total Population (2024)',
