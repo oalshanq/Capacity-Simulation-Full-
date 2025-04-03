@@ -1,56 +1,25 @@
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
-import folium
-from folium.plugins import MarkerCluster
-from streamlit_folium import st_folium
-from models import run_simulation, get_region_coords
+from models import load_data
 
-st.set_page_config(page_title="Saudi Healthcare Simulation Dashboard", layout="wide")
-st.title("Saudi Arabia Healthcare Forecasting Dashboard with Maps")
+def main():
+    st.title('Saudi Arabia Healthcare Statistics Dashboard')
 
-regions = [
-    "Riyadh", "Makkah", "Madinah", "Eastern Province", "Qassim", "Hail", "Tabuk",
-    "Jouf", "Nothern Borders", "Baha", "Assir", "Najran", "Jizan"
-]
+    # Load data
+    df = load_data()
 
-specialties = [
-    "Pediatrics", "General Surgery", "Internal Medicine", "Obstetrics", "Gynecology",
-    "Cardiology", "Oncology", "Neurology", "Orthopedics", "Neurosurgery",
-    "Cardiac Surgery", "Dentistry", "Dermatology", "Ophthalmology", "ENT",
-    "Family Medicine", "Geriatrics", "Palliative Care"
-]
+    # Display data table
+    st.subheader('Healthcare Statistics (2024)')
+    st.table(df)
 
-region = st.sidebar.selectbox("Select Region", regions)
-specialty = st.sidebar.selectbox("Select Specialty", specialties)
+    # Create a bar chart for healthcare resource indicators
+    st.subheader('Healthcare Resources per 10,000 Population')
+    resources_df = df[df['Indicator'].str.contains('Beds|Physicians|Nurses')]
+    fig = px.bar(resources_df, x='Indicator', y='Value', text='Value',
+                 labels={'Value': 'Rate per 10,000 Population'})
+    st.plotly_chart(fig)
 
-if "results" not in st.session_state:
-    st.session_state["results"] = None
-
-if st.sidebar.button("Run Simulation"):
-    st.session_state["results"] = run_simulation(region=region, specialty=specialty)
-
-if st.session_state["results"] is not None:
-    df = st.session_state["results"]
-
-    st.subheader(f"Forecast for {specialty} in {region}")
-    st.markdown("**Demand = projected number of patients requiring this specialty's services per year.**")
-    fig = px.line(df, x="Year", y=["Demand", "Beds", "Physicians", "Nurses"], markers=True)
-    fig.update_yaxes(title="Resource Quantity")
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.subheader("Map of Regions")
-    coords = get_region_coords()
-    fmap = folium.Map(location=[23.8859, 45.0792], zoom_start=5)
-    marker_cluster = MarkerCluster().add_to(fmap)
-    for reg, coord in coords.items():
-        folium.Marker(location=coord, popup=reg, tooltip=reg,
-                      icon=folium.Icon(color="blue")).add_to(marker_cluster)
-    st_folium(fmap, width=700)
-
-    csv = df.to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", csv, file_name=f"{region}_{specialty}_forecast.csv", mime="text/csv")
-else:
-    st.info("Click 'Run Simulation' to generate forecast and view maps.")
+if __name__ == '__main__':
+    main()
