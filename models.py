@@ -2,26 +2,30 @@
 import pandas as pd
 import numpy as np
 
-def simulate_demand(region, specialty):
+def simulate_demand_vbic(region, specialty):
     np.random.seed(42)
     years = list(range(2025, 2055))
-    base_demand = np.random.randint(5000, 10000)
-    data = []
+    base_rate = {
+        "Beds_per_1k": 2.5,
+        "Nurses_per_1k": 6.0,
+        "Outpatient_Clinics_per_1k": 1.2,
+        "Physician_Clinics_per_1k": 1.5
+    }
 
+    # Modulate by specialty (example logic)
+    specialty_modifier = hash(specialty) % 5 * 0.05 + 0.95  # Range ~0.95–1.15
+
+    data = []
     for i, year in enumerate(years):
-        growth = 1.02 ** i
-        demand = int(base_demand * growth)
-        beds = int(demand * 0.0225)  # 22.5 beds per 10k people
-        physicians = int(demand * 0.0331)
-        nurses = int(demand * 0.0582)
+        multiplier = 1.01 ** i  # 1% annual change
         data.append({
             "Year": year,
             "Region": region,
             "Specialty": specialty,
-            "Demand": demand,
-            "Beds": beds,
-            "Physicians": physicians,
-            "Nurses": nurses
+            "Beds_per_1k": round(base_rate["Beds_per_1k"] * multiplier * specialty_modifier, 2),
+            "Nurses_per_1k": round(base_rate["Nurses_per_1k"] * multiplier * specialty_modifier, 2),
+            "Outpatient_Clinics_per_1k": round(base_rate["Outpatient_Clinics_per_1k"] * multiplier * specialty_modifier, 2),
+            "Physician_Clinics_per_1k": round(base_rate["Physician_Clinics_per_1k"] * multiplier * specialty_modifier, 2)
         })
     return pd.DataFrame(data)
 

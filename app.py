@@ -1,12 +1,11 @@
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
-from models import simulate_demand, load_static_data
+from models import simulate_demand_vbic, load_static_data
 
-st.set_page_config(page_title="Saudi Healthcare Simulation", layout="wide")
-st.title("Saudi Arabia Healthcare Simulation Dashboard")
+st.set_page_config(page_title="Saudi VBIC Healthcare Simulation", layout="wide")
+st.title("Saudi Arabia Healthcare Forecast under Value-Based Integrated Care (VBIC)")
 
 # Sidebar inputs
 regions = ["Riyadh", "Makkah", "Madinah", "Eastern Province", "Qassim", "Hail", 
@@ -20,16 +19,22 @@ specialties = ["Pediatrics", "General Surgery", "Internal Medicine", "Obstetrics
 region = st.sidebar.selectbox("Select Region", regions)
 specialty = st.sidebar.selectbox("Select Specialty", specialties)
 
-if st.sidebar.button("Run Simulation"):
-    df = simulate_demand(region, specialty)
-    st.success(f"Simulation complete for {specialty} in {region}.")
+if st.sidebar.button("Run VBIC Simulation"):
+    df = simulate_demand_vbic(region, specialty)
+    st.success(f"VBIC Forecast complete for {specialty} in {region}.")
 
-    st.subheader("Projected Demand vs Capacity")
-    fig = px.line(df, x="Year", y=["Demand", "Beds", "Physicians", "Nurses"], markers=True)
+    st.subheader("Forecasted Resource Demand per 1,000 Population")
+    fig = px.line(df, x="Year", y=["Beds_per_1k", "Nurses_per_1k", "Outpatient_Clinics_per_1k", "Physician_Clinics_per_1k"],
+                  markers=True, labels={
+                      "Beds_per_1k": "Beds",
+                      "Nurses_per_1k": "Nurses",
+                      "Outpatient_Clinics_per_1k": "Outpatient Clinics",
+                      "Physician_Clinics_per_1k": "Physician Clinics"
+                  })
     st.plotly_chart(fig, use_container_width=True)
 
     csv = df.to_csv(index=False).encode("utf-8")
-    st.download_button("Download Results as CSV", csv, f"{region}_{specialty}_forecast.csv", "text/csv")
+    st.download_button("Download CSV", csv, f"{region}_{specialty}_vbic_forecast.csv", "text/csv")
 
 st.markdown("---")
 st.header("National Healthcare Statistics (Static)")
